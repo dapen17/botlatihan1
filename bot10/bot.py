@@ -28,7 +28,7 @@ if not os.path.exists(SESSION_DIR):
 bot_client = TelegramClient('bot_session', api_id, api_hash)
 
 # Dictionary untuk menyimpan sesi pengguna sementara
-user_sessions = {}  # Struktur: {user_id: {'client': TelegramClient, 'phone': str}}
+user_sessions = {}  # Struktur: {user_id: [{'client': TelegramClient, 'phone': str}]}
 
 @bot_client.on(events.NewMessage(pattern='/start'))
 async def start(event):
@@ -44,22 +44,30 @@ async def login(event):
     user_id = sender.id
     phone = event.pattern_match.group(1)
 
+    # Cek apakah user sudah login dengan 4 akun
+    if user_id in user_sessions and len(user_sessions[user_id]) >= 4:
+        await event.reply("⚠️ Anda sudah login dengan maksimal 4 akun. Logout salah satu untuk menambahkan akun baru.")
+        return
+
     session_file = os.path.join(SESSION_DIR, f'{user_id}_{phone.replace("+", "")}.session')
 
-    # **Cek apakah sesi sudah ada**
+    # Cek apakah sesi sudah ada
     if os.path.exists(session_file):
         try:
             user_client = TelegramClient(session_file, api_id, api_hash)
             await user_client.connect()
 
-            # **Pastikan sesi tidak terkunci**
+            # Pastikan sesi tidak terkunci
             if await user_client.is_user_authorized():
-                user_sessions[user_id] = {"client": user_client, "phone": phone}
+                if user_id not in user_sessions:
+                    user_sessions[user_id] = []
+                user_sessions[user_id].append({"client": user_client, "phone": phone})
+
                 await event.reply(f"✅ Anda sudah login sebelumnya! Langsung terhubung sebagai {phone}.")
                 await configure_event_handlers(user_client, user_id)
                 return
             else:
-                await user_client.disconnect()  # Tutup sesi jika tidak valid
+                await user_client.disconnect()
                 os.remove(session_file)  # Hapus sesi yang corrupt
                 await event.reply("⚠️ Sesi lama tidak valid, melakukan login ulang...")
         except errors.SessionPasswordNeededError:
@@ -71,13 +79,16 @@ async def login(event):
             except:
                 pass
 
-    # **Jika sesi tidak ada atau terkunci, lakukan login ulang dengan OTP**
+    # Login dengan OTP
     try:
         user_client = TelegramClient(session_file, api_id, api_hash)
         await user_client.connect()
         await user_client.send_code_request(phone)
 
-        user_sessions[user_id] = {"client": user_client, "phone": phone}
+        if user_id not in user_sessions:
+            user_sessions[user_id] = []
+        user_sessions[user_id].append({"client": user_client, "phone": phone})
+
         await event.reply("✅ Kode OTP telah dikirim! Masukkan kode dengan mengetik:\n`/verify <Kode>`")
     except errors.FloodWaitError as e:
         await event.reply(f"⚠️ Tunggu {e.seconds} detik sebelum mencoba lagi.")
@@ -90,12 +101,12 @@ async def verify(event):
     user_id = sender.id
     code = event.pattern_match.group(1)
 
-    if user_id not in user_sessions:
+    if user_id not in user_sessions or not user_sessions[user_id]:
         await event.reply("⚠️ Anda belum login. Gunakan perintah `/login` terlebih dahulu.")
         return
 
-    user_client = user_sessions[user_id]["client"]
-    phone = user_sessions[user_id]["phone"]
+    user_client = user_sessions[user_id][-1]["client"]
+    phone = user_sessions[user_id][-1]["phone"]
 
     try:
         await user_client.sign_in(phone, code)
@@ -112,16 +123,26 @@ async def logout(event):
 
     session_file = os.path.join(SESSION_DIR, f'{user_id}_{phone.replace("+", "")}.session')
 
-    if user_id in user_sessions and user_sessions[user_id]['phone'] == phone:
-        user_client = user_sessions[user_id]['client']
-        await user_client.disconnect()
-        del user_sessions[user_id]
+    if user_id in user_sessions:
+        user_sessions[user_id] = [s for s in user_sessions[user_id] if s["phone"] != phone]
 
     if os.path.exists(session_file):
         os.remove(session_file)
         await event.reply(f"✅ Berhasil logout untuk nomor {phone}.")
     else:
         await event.reply(f"⚠️ Tidak ada sesi aktif untuk nomor {phone}.")
+
+@bot_client.on(events.NewMessage(pattern='/list'))
+async def list_accounts(event):
+    sender = await event.get_sender()
+    user_id = sender.id
+
+    if user_id not in user_sessions or not user_sessions[user_id]:
+        await event.reply("⚠️ Anda belum login dengan akun mana pun.")
+        return
+
+    accounts = "\n".join([f"📞 {s['phone']}" for s in user_sessions[user_id]])
+    await event.reply(f"📋 **Daftar akun yang sedang login:**\n{accounts}")
 
 @bot_client.on(events.NewMessage(pattern='/help'))
 async def help_command(event):
@@ -131,6 +152,7 @@ async def help_command(event):
         "`/login <Nomor>` - Masukkan nomor telepon Anda untuk login.\n"
         "`/verify <Kode>` - Verifikasi kode OTP.\n"
         "`/logout <Nomor>` - Logout dari sesi yang aktif.\n"
+        "`/list` - Menampilkan daftar akun yang sedang login.\n"
         "`/help` - Tampilkan daftar perintah."
     )
 
