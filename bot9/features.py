@@ -27,7 +27,7 @@ def get_today_date():
 async def configure_event_handlers(client, user_id):
     """Konfigurasi semua fitur bot untuk user_id tertentu."""
 
-    @client.on(events.NewMessage(pattern=r'^\\hastle (.+) (\d+[smhd])$'))
+    @client.on(events.NewMessage(pattern=r'^303hastle (.+) (\d+[smhd])$'))
     async def hastle_handler(event):
         """Spam pesan ke grup dengan interval."""
         custom_message, interval_str = event.pattern_match.groups()
@@ -55,7 +55,7 @@ async def configure_event_handlers(client, user_id):
                 await event.reply(f"⚠️ Error: {e}")
                 active_groups[group_id][user_id] = False
 
-    @client.on(events.NewMessage(pattern=r'^\\stop$'))
+    @client.on(events.NewMessage(pattern=r'^303stop$'))
     async def stop_handler(event):
         """Hentikan spam untuk akun di grup tertentu."""
         group_id = event.chat_id
@@ -65,13 +65,13 @@ async def configure_event_handlers(client, user_id):
         else:
             await event.reply("⚠️ Tidak ada spam yang berjalan untuk akun Anda di grup ini.")
 
-    @client.on(events.NewMessage(pattern=r'^\\ping$'))
+    @client.on(events.NewMessage(pattern=r'^303ping$'))
     async def ping_handler(event):
         """Tes koneksi bot."""
         await event.reply("🏓 Pong! Bot aktif.")
         message_count[get_today_date()] += 1
 
-    @client.on(events.NewMessage(pattern=r'^\\bcstar (.+)$'))
+    @client.on(events.NewMessage(pattern=r'^303bcstar (.+)$'))
     async def broadcast_handler(event):
         """Broadcast pesan ke semua chat kecuali blacklist."""
         custom_message = event.pattern_match.group(1)
@@ -85,7 +85,7 @@ async def configure_event_handlers(client, user_id):
             except Exception as e:
                 print(f"Gagal mengirim pesan ke {dialog.name}: {e}")
 
-    @client.on(events.NewMessage(pattern=r'^\\bcstarw (\d+[smhd]) (.+)$'))
+    @client.on(events.NewMessage(pattern=r'^303bcstarw (\d+[smhd]) (.+)$'))
     async def broadcast_with_interval_handler(event):
         """Broadcast pesan ke semua chat dengan interval tertentu."""
         interval_str, custom_message = event.pattern_match.groups()
@@ -112,7 +112,7 @@ async def configure_event_handlers(client, user_id):
                     print(f"Gagal mengirim pesan ke {dialog.name}: {e}")
             await asyncio.sleep(interval)
 
-    @client.on(events.NewMessage(pattern=r'^\\stopbcstarw$'))
+    @client.on(events.NewMessage(pattern=r'^303stopbcstarw$'))
     async def stop_broadcast_interval_handler(event):
         """Hentikan broadcast interval."""
         if active_bc_interval[user_id]["all"]:
@@ -121,7 +121,7 @@ async def configure_event_handlers(client, user_id):
         else:
             await event.reply("⚠️ Tidak ada broadcast interval yang berjalan.")
 
-    @client.on(events.NewMessage(pattern=r'^\\bcstargr(\d+) (\d+[smhd]) (.+)$'))
+    @client.on(events.NewMessage(pattern=r'^303bcstargr(\d+) (\d+[smhd]) (.+)$'))
     async def broadcast_group_handler(event):
         """Broadcast pesan hanya ke grup dengan interval tertentu."""
         group_number = event.pattern_match.group(1)
@@ -148,7 +148,7 @@ async def configure_event_handlers(client, user_id):
                         print(f"Gagal mengirim pesan ke {dialog.name}: {e}")
             await asyncio.sleep(interval)
 
-    @client.on(events.NewMessage(pattern=r'^\\stopbcstargr(\d+)$'))
+    @client.on(events.NewMessage(pattern=r'^303stopbcstargr(\d+)$'))
     async def stop_broadcast_group_handler(event):
         """Hentikan broadcast grup."""
         group_number = event.pattern_match.group(1)
@@ -158,14 +158,14 @@ async def configure_event_handlers(client, user_id):
         else:
             await event.reply(f"⚠️ Tidak ada broadcast grup {group_number} yang berjalan.")
 
-    @client.on(events.NewMessage(pattern=r'^\\bl$'))
+    @client.on(events.NewMessage(pattern=r'^303bl$'))
     async def blacklist_handler(event):
         """Tambahkan grup/chat ke blacklist."""
         chat_id = event.chat_id
         blacklist.add(chat_id)
         await event.reply("✅ Grup ini telah ditambahkan ke blacklist.")
 
-    @client.on(events.NewMessage(pattern=r'^\\unbl$'))
+    @client.on(events.NewMessage(pattern=r'^303unbl$'))
     async def unblacklist_handler(event):
         """Hapus grup/chat dari blacklist."""
         chat_id = event.chat_id
@@ -175,56 +175,56 @@ async def configure_event_handlers(client, user_id):
         else:
             await event.reply("⚠️ Grup ini tidak ada dalam blacklist.")
 
-    @client.on(events.NewMessage(pattern=r'^\\help$'))
+    @client.on(events.NewMessage(pattern=r'^303help$'))
     async def help_handler(event):
         """Tampilkan daftar perintah."""
         help_text = (
             "📋 **Daftar Perintah yang Tersedia:**\n\n"
-            "1. \\hastle [pesan] [waktu][s/m/h/d]\n"
+            "1. 303hastle [pesan] [waktu][s/m/h/d]\n"
             "   Spam pesan di grup dengan interval tertentu.\n"
-            "2. \\stop\n"
+            "2. 303stop\n"
             "   Hentikan spam di grup.\n"
-            "3. \\ping\n"
+            "3. 303ping\n"
             "   Tes koneksi bot.\n"
-            "4. \\bcstar [pesan]\n"
+            "4. 303bcstar [pesan]\n"
             "   Broadcast ke semua chat kecuali blacklist.\n"
-            "5. \\bcstarw [waktu][s/m/h/d] [pesan]\n"
+            "5. 303bcstarw [waktu][s/m/h/d] [pesan]\n"
             "   Broadcast ke semua chat dengan interval tertentu.\n"
-            "6. \\stopbcstarw\n"
+            "6. 303stopbcstarw\n"
             "   Hentikan broadcast interval.\n"
-            "7. \\bcstargr [waktu][s/m/h/d] [pesan]\n"
+            "7. 303bcstargr [waktu][s/m/h/d] [pesan]\n"
             "   Broadcast hanya ke grup dengan interval tertentu.\n"
-            "8. \\bcstargr1 [waktu][s/m/h/d] [pesan]\n"
+            "8. 303bcstargr1 [waktu][s/m/h/d] [pesan]\n"
             "   Broadcast hanya ke grup 1 dengan interval tertentu.\n"
-            "9. \\bcstargr2 [waktu][s/m/h/d] [pesan]\n"
+            "9. 303bcstargr2 [waktu][s/m/h/d] [pesan]\n"
             "   Broadcast hanya ke grup 2 dengan interval tertentu.\n"
-            "10. \\bcstargr3 [waktu][s/m/h/d] [pesan]\n"
+            "10. 303bcstargr3 [waktu][s/m/h/d] [pesan]\n"
             "    Broadcast hanya ke grup 3 dengan interval tertentu.\n"
-            "11. \\bcstargr4 [waktu][s/m/h/d] [pesan]\n"
+            "11. 303bcstargr4 [waktu][s/m/h/d] [pesan]\n"
             "    Broadcast hanya ke grup 4 dengan interval tertentu.\n"
-            "12. \\bcstargr5 [waktu][s/m/h/d] [pesan]\n"
+            "12. 303bcstargr5 [waktu][s/m/h/d] [pesan]\n"
             "    Broadcast hanya ke grup 5 dengan interval tertentu.\n"
-            "13. \\bcstargr6 [waktu][s/m/h/d] [pesan]\n"
+            "13. 303bcstargr6 [waktu][s/m/h/d] [pesan]\n"
             "    Broadcast hanya ke grup 6 dengan interval tertentu.\n"
-            "14. \\bcstargr7 [waktu][s/m/h/d] [pesan]\n"
+            "14. 303bcstargr7 [waktu][s/m/h/d] [pesan]\n"
             "    Broadcast hanya ke grup 7 dengan interval tertentu.\n"
-            "15. \\bcstargr8 [waktu][s/m/h/d] [pesan]\n"
+            "15. 303bcstargr8 [waktu][s/m/h/d] [pesan]\n"
             "    Broadcast hanya ke grup 8 dengan interval tertentu.\n"
-            "16. \\bcstargr9 [waktu][s/m/h/d] [pesan]\n"
+            "16. 303bcstargr9 [waktu][s/m/h/d] [pesan]\n"
             "    Broadcast hanya ke grup 9 dengan interval tertentu.\n"
-            "17. \\bcstargr10 [waktu][s/m/h/d] [pesan]\n"
+            "17. 303bcstargr10 [waktu][s/m/h/d] [pesan]\n"
             "    Broadcast hanya ke grup 10 dengan interval tertentu.\n"
-            "18. \\stopbcstargr[1-10]\n"
+            "18. 303stopbcstargr[1-10]\n"
             "    Hentikan broadcast ke grup tertentu.\n"
-            "19. \\bl\n"
+            "19. 303bl\n"
             "    Tambahkan grup/chat ke blacklist.\n"
-            "20. \\unbl\n"
+            "20. 303unbl\n"
             "    Hapus grup/chat dari blacklist.\n"
-            "21. \\info\n"
+            "21. 303info\n"
             "    Tampilkan informasi akun Anda.\n"
-            "22. \\listusn\n"
+            "22. 303listusn\n"
             "    Tampilkan riwayat username Anda.\n"
-            "23. \\totalmessages\n"
+            "23. 303totalmessages\n"
             "    Tampilkan total pesan hari ini."
         )
         await event.reply(help_text)
