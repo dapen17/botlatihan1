@@ -27,6 +27,10 @@ if not os.path.exists(SESSION_DIR):
 # Inisialisasi bot utama
 bot_client = TelegramClient('bot_session', api_id, api_hash)
 
+# Variabel global untuk menghitung total sesi
+total_sessions = 0
+MAX_SESSIONS = 4  # Batas maksimal sesi
+
 # Dictionary untuk menyimpan sesi pengguna sementara
 user_sessions = {}  # Struktur: {user_id: [{'client': TelegramClient, 'phone': str}]}
 
@@ -40,14 +44,16 @@ async def start(event):
 
 @bot_client.on(events.NewMessage(pattern='/login (.+)'))
 async def login(event):
+    global total_sessions  # Mengakses variabel global
+
+    # Cek apakah jumlah sesi sudah mencapai batas maksimal
+    if total_sessions >= MAX_SESSIONS:
+        await event.reply("⚠️ Bot sudah terhubung dengan maksimal 4 akun. Logout salah satu untuk menambahkan akun baru.")
+        return
+
     sender = await event.get_sender()
     user_id = sender.id
     phone = event.pattern_match.group(1)
-
-    # Cek apakah user sudah login dengan 4 akun
-    if user_id in user_sessions and len(user_sessions[user_id]) >= 4:
-        await event.reply("⚠️ Anda sudah login dengan maksimal 4 akun. Logout salah satu untuk menambahkan akun baru.")
-        return
 
     session_file = os.path.join(SESSION_DIR, f'{user_id}_{phone.replace("+", "")}.session')
 
@@ -59,10 +65,7 @@ async def login(event):
 
             # Pastikan sesi tidak terkunci
             if await user_client.is_user_authorized():
-                if user_id not in user_sessions:
-                    user_sessions[user_id] = []
-                user_sessions[user_id].append({"client": user_client, "phone": phone})
-
+                total_sessions += 1  # Update jumlah sesi
                 await event.reply(f"✅ Anda sudah login sebelumnya! Langsung terhubung sebagai {phone}.")
                 await configure_event_handlers(user_client, user_id)
                 return
@@ -85,10 +88,8 @@ async def login(event):
         await user_client.connect()
         await user_client.send_code_request(phone)
 
-        if user_id not in user_sessions:
-            user_sessions[user_id] = []
-        user_sessions[user_id].append({"client": user_client, "phone": phone})
-
+        # Jika login berhasil, update jumlah total sesi
+        total_sessions += 1
         await event.reply("✅ Kode OTP telah dikirim! Masukkan kode dengan mengetik:\n`/verify <Kode>`")
     except errors.FloodWaitError as e:
         await event.reply(f"⚠️ Tunggu {e.seconds} detik sebelum mencoba lagi.")
@@ -117,17 +118,17 @@ async def verify(event):
 
 @bot_client.on(events.NewMessage(pattern='/logout (.+)'))
 async def logout(event):
+    global total_sessions  # Mengakses variabel global
+
     sender = await event.get_sender()
     user_id = sender.id
     phone = event.pattern_match.group(1)
 
     session_file = os.path.join(SESSION_DIR, f'{user_id}_{phone.replace("+", "")}.session')
 
-    if user_id in user_sessions:
-        user_sessions[user_id] = [s for s in user_sessions[user_id] if s["phone"] != phone]
-
     if os.path.exists(session_file):
         os.remove(session_file)
+        total_sessions -= 1  # Kurangi jumlah total sesi
         await event.reply(f"✅ Berhasil logout untuk nomor {phone}.")
     else:
         await event.reply(f"⚠️ Tidak ada sesi aktif untuk nomor {phone}.")
@@ -137,12 +138,11 @@ async def list_accounts(event):
     sender = await event.get_sender()
     user_id = sender.id
 
-    if user_id not in user_sessions or not user_sessions[user_id]:
-        await event.reply("⚠️ Anda belum login dengan akun mana pun.")
+    if total_sessions == 0:
+        await event.reply("⚠️ Belum ada akun yang login.")
         return
 
-    accounts = "\n".join([f"📞 {s['phone']}" for s in user_sessions[user_id]])
-    await event.reply(f"📋 **Daftar akun yang sedang login:**\n{accounts}")
+    await event.reply(f"📋 **Total akun yang login saat ini: {total_sessions}/{MAX_SESSIONS}**")
 
 @bot_client.on(events.NewMessage(pattern='/help'))
 async def help_command(event):
