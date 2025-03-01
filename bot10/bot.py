@@ -29,7 +29,7 @@ bot_client = TelegramClient('bot_session', api_id, api_hash)
 
 # Variabel global untuk menghitung total sesi
 total_sessions = 0
-MAX_SESSIONS = 4  # Batas maksimal sesi
+MAX_SESSIONS = 4  # Batas maksimal sesi (ubah menjadi 10)
 
 # Dictionary untuk menyimpan sesi pengguna sementara
 user_sessions = {}  # Struktur: {user_id: [{'client': TelegramClient, 'phone': str}]}
@@ -48,7 +48,7 @@ async def login(event):
 
     # Cek apakah jumlah sesi sudah mencapai batas maksimal
     if total_sessions >= MAX_SESSIONS:
-        await event.reply("⚠️ Bot sudah terhubung dengan maksimal 4 akun. Logout salah satu untuk menambahkan akun baru.")
+        await event.reply("⚠️ Bot sudah terhubung dengan maksimal 10 akun. Logout salah satu untuk menambahkan akun baru.")
         return
 
     sender = await event.get_sender()
@@ -66,6 +66,10 @@ async def login(event):
             # Pastikan sesi tidak terkunci
             if await user_client.is_user_authorized():
                 total_sessions += 1  # Update jumlah sesi
+                # Simpan sesi di user_sessions
+                if user_id not in user_sessions:
+                    user_sessions[user_id] = []
+                user_sessions[user_id].append({"client": user_client, "phone": phone})
                 await event.reply(f"✅ Anda sudah login sebelumnya! Langsung terhubung sebagai {phone}.")
                 await configure_event_handlers(user_client, user_id)
                 return
@@ -88,8 +92,12 @@ async def login(event):
         await user_client.connect()
         await user_client.send_code_request(phone)
 
-        # Jika login berhasil, update jumlah total sesi
+        # Jika login berhasil, update jumlah total sesi dan simpan sesi pengguna
         total_sessions += 1
+        if user_id not in user_sessions:
+            user_sessions[user_id] = []
+        user_sessions[user_id].append({"client": user_client, "phone": phone})
+
         await event.reply("✅ Kode OTP telah dikirim! Masukkan kode dengan mengetik:\n`/verify <Kode>`")
     except errors.FloodWaitError as e:
         await event.reply(f"⚠️ Tunggu {e.seconds} detik sebelum mencoba lagi.")
@@ -106,6 +114,7 @@ async def verify(event):
         await event.reply("⚠️ Anda belum login. Gunakan perintah `/login` terlebih dahulu.")
         return
 
+    # Cek jika ada client aktif untuk user ini
     user_client = user_sessions[user_id][-1]["client"]
     phone = user_sessions[user_id][-1]["phone"]
 
@@ -115,6 +124,7 @@ async def verify(event):
         await configure_event_handlers(user_client, user_id)
     except Exception as e:
         await event.reply(f"⚠️ Gagal memverifikasi kode untuk nomor {phone}: {e}")
+
 
 @bot_client.on(events.NewMessage(pattern='/logout (.+)'))
 async def logout(event):
