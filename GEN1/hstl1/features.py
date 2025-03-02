@@ -46,6 +46,10 @@ async def configure_event_handlers(client, user_id):
             try:
                 await client.send_message(dialog.id, custom_message)
                 message_count[get_today_date()] += 1
+            except errors.FloodWaitError as e:
+                print(f"Flood wait error: Bot harus menunggu {e.seconds} detik.")
+                await asyncio.sleep(e.seconds)
+                await client.send_message(dialog.id, custom_message)  # Retry after wait
             except Exception as e:
                 print(f"Gagal mengirim pesan ke {dialog.name}: {e}")
 
@@ -86,6 +90,10 @@ async def configure_event_handlers(client, user_id):
                     try:
                         await client.send_message(dialog.id, custom_message)
                         message_count[get_today_date()] += 1
+                    except errors.FloodWaitError as e:
+                        print(f"Flood wait error: Bot harus menunggu {e.seconds} detik.")
+                        await asyncio.sleep(e.seconds)
+                        await client.send_message(dialog.id, custom_message)  # Retry after wait
                     except Exception as e:
                         print(f"Gagal mengirim pesan ke {dialog.name}: {e}")
 
@@ -137,6 +145,7 @@ async def configure_event_handlers(client, user_id):
                 print("Gagal mengirim auto-reply: Username tidak ditemukan.")
             except errors.rpcerrorlist.FloodWaitError as e:
                 print(f"Bot terkena flood wait. Coba lagi dalam {e.seconds} detik.")
+                await asyncio.sleep(e.seconds)  # Tunggu sampai waktunya selesai sebelum mencoba lagi
             except Exception as e:
                 print(f"Gagal mengirim auto-reply: {e}")
 
