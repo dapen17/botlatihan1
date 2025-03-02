@@ -55,62 +55,69 @@ async def configure_event_handlers(client, user_id):
 
     @client.on(events.NewMessage(pattern=r'^gal bcstargr(\d+) (\d+[smhd]) (.+)$'))
     async def broadcast_group_handler(event):
-        """Broadcast pesan hanya ke grup dengan interval tertentu."""
-        group_number = event.pattern_match.group(1)
-        interval_str, custom_message = event.pattern_match.groups()[1:]
-        interval = parse_interval(interval_str)
+    """Broadcast pesan hanya ke grup dengan interval tertentu."""
+    group_number = event.pattern_match.group(1)
+    interval_str, custom_message = event.pattern_match.groups()[1:]
+    interval = parse_interval(interval_str)
 
-        if not interval:
-            await event.reply("\u26A0 Format waktu salah! Gunakan format 10s, 1m, 2h, dll.")
-            return
+    if not interval:
+        await event.reply("\u26A0 Format waktu salah! Gunakan format 10s, 1m, 2h, dll.")
+        return
 
-        if active_bc_interval[user_id][f"group{group_number}"]:
-            await event.reply(f"\u26A0 Broadcast ke grup {group_number} sudah berjalan.")
-            return
+    # Cek jika broadcast sudah berjalan
+    if active_bc_interval[user_id][f"group{group_number}"]:
+        await event.reply(f"\u26A0 Broadcast ke grup {group_number} sudah berjalan.")
+        return
 
-        active_bc_interval[user_id][f"group{group_number}"] = True
-        await event.reply(f"\u2705 Memulai broadcast ke grup {group_number} dengan interval {interval_str}: {custom_message}\nStatus: Broadcast berjalan...")
+    # Tandai broadcast sebagai aktif
+    active_bc_interval[user_id][f"group{group_number}"] = True
+    await event.reply(f"\u2705 Memulai broadcast ke grup {group_number} dengan interval {interval_str}: {custom_message}\nStatus: Broadcast berjalan...")
 
-        total_groups = 0  # Track total grup yang ada
+    total_groups = 0  # Track total grup yang ada
 
-        # Hitung total grup yang ada
-        async for dialog in client.iter_dialogs():
+    # Hitung total grup yang ada
+    async for dialog in client.iter_dialogs():
+        if dialog.is_group and dialog.id not in blacklist:
+            total_groups += 1
+
+    if total_groups == 0:
+        await event.reply("🚫 Tidak ada grup untuk dikirim!")
+        return
+
+    # Proses broadcast ke grup dengan interval dan kirim pesan baru setiap kali
+    while active_bc_interval[user_id][f"group{group_number}"]:
+        # Kirim pesan ke setiap grup
+        for dialog in await client.get_dialogs():
             if dialog.is_group and dialog.id not in blacklist:
-                total_groups += 1
-
-        if total_groups == 0:
-            await event.reply("🚫 Tidak ada grup untuk dikirim!")
-            return
-
-        # Proses broadcast ke grup dengan interval dan kirim pesan baru setiap kali
-        while active_bc_interval[user_id][f"group{group_number}"]:
-            # Kirim pesan ke setiap grup
-            for dialog in await client.get_dialogs():
-                if dialog.is_group and dialog.id not in blacklist:
-                    try:
+                try:
+                    await client.send_message(dialog.id, custom_message)
+                    message_count[get_today_date()] += 1
+                except errors.FloodWaitError as e:
+                    # Tampilkan pesan jika terjadi flood wait
+                    await event.reply(f"Flood wait error: Bot harus menunggu {e.seconds} detik sebelum melanjutkan.")
+                    print(f"Flood wait error: Bot harus menunggu {e.seconds} detik.")
+                    await asyncio.sleep(e.seconds)  # Tunggu hingga flood wait selesai
+                    # Setelah menunggu, melanjutkan broadcast
+                    if active_bc_interval[user_id][f"group{group_number}"]:  # Pastikan broadcast masih aktif
                         await client.send_message(dialog.id, custom_message)
-                        message_count[get_today_date()] += 1
-                    except errors.FloodWaitError as e:
-                        print(f"Flood wait error: Bot harus menunggu {e.seconds} detik.")
-                        await asyncio.sleep(e.seconds)
-                        await client.send_message(dialog.id, custom_message)  # Retry after wait
-                    except Exception as e:
-                        print(f"Gagal mengirim pesan ke {dialog.name}: {e}")
+                except Exception as e:
+                    print(f"Gagal mengirim pesan ke {dialog.name}: {e}")
 
-            # Kirim pesan status baru untuk menunjukkan bahwa broadcast masih berjalan
-            await client.send_message(
-                event.chat_id,
-                f"\u2705 Memulai broadcast ke grup {group_number} dengan interval {interval_str}: {custom_message}\nStatus: Broadcast berjalan... Interval: {interval_str}"
-            )
-
-            # Tunggu sesuai interval waktu sebelum melanjutkan
-            await asyncio.sleep(interval)
-
-        # Kirim pesan ketika broadcast selesai
+        # Kirim pesan status baru untuk menunjukkan bahwa broadcast masih berjalan
         await client.send_message(
             event.chat_id,
-            f"✅ Broadcast ke grup {group_number} selesai!"
+            f"\u2705 Memulai broadcast ke grup {group_number} dengan interval {interval_str}: {custom_message}\nStatus: Broadcast berjalan... Interval: {interval_str}"
         )
+
+        # Tunggu sesuai interval waktu sebelum melanjutkan
+        await asyncio.sleep(interval)
+
+    # Kirim pesan ketika broadcast selesai
+    await client.send_message(
+        event.chat_id,
+        f"✅ Broadcast ke grup {group_number} selesai!"
+    )
+
 
     @client.on(events.NewMessage(pattern=r'^gal stopbcstargr(\d+)$'))
     async def stop_broadcast_group_handler(event):
