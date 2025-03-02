@@ -179,8 +179,8 @@ async def configure_event_handlers(client, user_id):
             "gal bcstar <pesan> - Kirim broadcast ke semua chat\n"
             "gal bcstargr<nomor> <interval> <pesan> - Kirim broadcast ke grup tertentu\n"
             "gal stopbcstargr<nomor> - Hentikan broadcast ke grup tertentu\n"
-            "gal setreply <pesan> - Set auto-reply untuk chat masuk untuk seluruh akun yang terkoneksi bot\n"
-            "gal stopall - Reset semua pengaturan semua akun yang ada di bot\n"
+            "gal setreply <pesan> - Set auto-reply untuk chat masuk\n"
+            "gal stopall - Reset semua pengaturan\n"
             "gal help - Menampilkan daftar perintah"
         )
         await event.reply(help_text)
