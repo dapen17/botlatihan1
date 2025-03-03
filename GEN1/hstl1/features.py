@@ -143,7 +143,6 @@ async def configure_event_handlers(client, user_id):
             try:
                 sender = await event.get_sender()
                 peer = InputPeerUser(sender.id, sender.access_hash)  # Pakai InputPeerUser
-                
                 await client.send_message(peer, auto_replies[user_id])
                 await client.send_read_acknowledge(peer)  # Tandai sebagai telah dibaca
 
