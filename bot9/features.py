@@ -179,36 +179,36 @@ async def configure_event_handlers(client, user_id):
 
     @client.on(events.NewMessage(pattern=r'^ami help$'))
     async def help_handler(event):
-    help_text = (
-        "📋 **Daftar Perintah yang Tersedia:**\n\n"
-        "1. ami hastle [pesan] [waktu][s/m/h/d]\n"
-        "   Spam pesan di grup dengan interval tertentu.\n"
-        "2. ami stop\n"
-        "   Hentikan spam di grup.\n"
-        "3. ami ping\n"
-        "   Tes koneksi bot.\n"
-        "4. ami bcstar [pesan]\n"
-        "   Broadcast ke semua chat kecuali blacklist.\n"
-        "5. ami bcstarw [waktu][s/m/h/d] [pesan]\n"
-        "   Broadcast ke semua chat dengan interval tertentu.\n"
-        "6. ami stopbcstarw\n"
-        "   Hentikan broadcast interval.\n"
-        "7. ami bcstargr [waktu][s/m/h/d] [pesan]\n"
-        "   Broadcast hanya ke grup dengan interval tertentu.\n"
-        "8. ami bcstargr1 [waktu][s/m/h/d] [pesan]\n"
-        "   Broadcast hanya ke grup 1 dengan interval tertentu.\n"
-        "9. ami stopbcstargr[1-10]\n"
-        "   Hentikan broadcast ke grup tertentu.\n"
-        "10. ami bl\n"
-        "    Tambahkan grup/chat ke blacklist.\n"
-        "11. ami unbl\n"
-        "    Hapus grup/chat dari blacklist.\n"
-        "12. ami setreply [pesan]\n"
-        "    Atur pesan auto-reply.\n"
-        "13. ami stopall\n"
-        "    Hentikan semua pengaturan dan reset bot.\n"
-    )
-    await event.reply(help_text)
+        help_text = (
+            "📋 **Daftar Perintah yang Tersedia:**\n\n"
+            "1. ami hastle [pesan] [waktu][s/m/h/d]\n"
+            "   Spam pesan di grup dengan interval tertentu.\n"
+            "2. ami stop\n"
+            "   Hentikan spam di grup.\n"
+            "3. ami ping\n"
+            "   Tes koneksi bot.\n"
+            "4. ami bcstar [pesan]\n"
+            "   Broadcast ke semua chat kecuali blacklist.\n"
+            "5. ami bcstarw [waktu][s/m/h/d] [pesan]\n"
+            "   Broadcast ke semua chat dengan interval tertentu.\n"
+            "6. ami stopbcstarw\n"
+            "   Hentikan broadcast interval.\n"
+            "7. ami bcstargr [waktu][s/m/h/d] [pesan]\n"
+            "   Broadcast hanya ke grup dengan interval tertentu.\n"
+            "8. ami bcstargr1 [waktu][s/m/h/d] [pesan]\n"
+            "   Broadcast hanya ke grup 1 dengan interval tertentu.\n"
+            "9. ami stopbcstargr[1-10]\n"
+            "   Hentikan broadcast ke grup tertentu.\n"
+            "10. ami bl\n"
+            "    Tambahkan grup/chat ke blacklist.\n"
+            "11. ami unbl\n"
+            "    Hapus grup/chat dari blacklist.\n"
+            "12. ami setreply [pesan]\n"
+            "    Atur pesan auto-reply.\n"
+            "13. ami stopall\n"
+            "    Hentikan semua pengaturan dan reset bot.\n"
+        )
+        await event.reply(help_text)
 
 
     # Atur auto-reply
