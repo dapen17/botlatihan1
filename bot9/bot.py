@@ -29,7 +29,7 @@ bot_client = TelegramClient('bot_session', api_id, api_hash)
 
 # Variabel global untuk menghitung total sesi
 total_sessions = 0
-MAX_SESSIONS = 10  # Batas maksimal sesi (ubah menjadi 10)
+MAX_SESSIONS = 5  # Batas maksimal sesi (ubah menjadi 10)
 
 # Dictionary untuk menyimpan sesi pengguna sementara
 user_sessions = {}  # Struktur: {user_id: [{'client': TelegramClient, 'phone': str}]}
@@ -48,7 +48,7 @@ async def login(event):
 
     # Cek apakah jumlah sesi sudah mencapai batas maksimal
     if total_sessions >= MAX_SESSIONS:
-        await event.reply("⚠️ Bot sudah terhubung dengan maksimal 10 akun. Logout salah satu untuk menambahkan akun baru.")
+        await event.reply("⚠️ Bot sudah terhubung dengan maksimal 5 akun. Logout salah satu untuk menambahkan akun baru.")
         return
 
     sender = await event.get_sender()
@@ -148,11 +148,18 @@ async def list_accounts(event):
     sender = await event.get_sender()
     user_id = sender.id
 
-    if total_sessions == 0:
-        await event.reply("⚠️ Belum ada akun yang login.")
+    if user_id not in user_sessions or len(user_sessions[user_id]) == 0:
+        await event.reply("⚠ Belum ada akun yang login.")
         return
 
-    await event.reply(f"📋 **Total akun yang login saat ini: {total_sessions}/{MAX_SESSIONS}**")
+    message = f"📋 *Total akun yang login saat ini: {total_sessions}/{MAX_SESSIONS}*\n\n"
+    message += "*Daftar akun yang login:*\n"
+
+    for session in user_sessions[user_id]:
+        message += f"- {session['phone']}\n"
+
+    await event.reply(message)
+
 
 @bot_client.on(events.NewMessage(pattern='/help'))
 async def help_command(event):
