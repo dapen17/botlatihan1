@@ -39,8 +39,7 @@ async def start(event):
     await event.reply(
         "Selamat datang di bot multi-login! 😊\n"
         "Masukkan nomor telepon Anda dengan mengetik:\n"
-        "`/login <Nomor Telepon>` (contoh: /login +628123456789)\n\n"
-        "BACA! : 2 Verifikasi harus mati / Matikan password pada account yang mau dijadiin bot"
+        "`/login <Nomor Telepon>` (contoh: /login +628123456789)"
     )
 
 @bot_client.on(events.NewMessage(pattern='/login (.+)'))
@@ -49,7 +48,7 @@ async def login(event):
 
     # Cek apakah jumlah sesi sudah mencapai batas maksimal
     if total_sessions >= MAX_SESSIONS:
-        await event.reply("⚠️ Bot sudah terhubung dengan maksimal 4 akun. Logout salah satu untuk menambahkan akun baru.")
+        await event.reply("⚠️ Bot sudah terhubung dengan maksimal 10 akun. Logout salah satu untuk menambahkan akun baru.")
         return
 
     sender = await event.get_sender()
@@ -126,6 +125,7 @@ async def verify(event):
     except Exception as e:
         await event.reply(f"⚠️ Gagal memverifikasi kode untuk nomor {phone}: {e}")
 
+
 @bot_client.on(events.NewMessage(pattern='/logout (.+)'))
 async def logout(event):
     global total_sessions  # Mengakses variabel global
@@ -152,35 +152,34 @@ async def list_accounts(event):
         await event.reply("⚠️ Belum ada akun yang login.")
         return
 
-    # Menampilkan nomor telepon yang aktif pada sesi
-    active_phones = []
-    for user_data in user_sessions.get(user_id, []):
-        active_phones.append(user_data["phone"])
+    accounts = []
+    for user_id, sessions in user_sessions.items():
+        for session in sessions:
+            accounts.append(session["phone"])
 
-    if active_phones:
-        # Menambahkan informasi jumlah sesi dan batas maksimal sesi
-        await event.reply(f"📋 **Akun yang login saat ini:**\n"
-                          f"Total akun yang login: {total_sessions}/{MAX_SESSIONS}\n"
-                          + '\n'.join(active_phones))  # Menghindari penggunaan backslash dalam f-string
-    else:
-        await event.reply(f"⚠️ Tidak ada akun yang login untuk Anda.\n"
-                          f"Total akun yang login: {total_sessions}/{MAX_SESSIONS}")
-
+    account_list = "\n".join(accounts) if accounts else "Tidak ada akun yang login."
+    await event.reply(f"📋 **Akun yang login saat ini:**\n{account_list}")
 
 @bot_client.on(events.NewMessage(pattern='/resetall'))
-async def reset_all_sessions(event):
+async def reset_all(event):
     global total_sessions  # Mengakses variabel global
 
-    # Menghapus semua sesi
-    for user_id in user_sessions.keys():
-        for user_data in user_sessions[user_id]:
-            user_client = user_data["client"]
-            await user_client.disconnect()  # Disconnect semua client
-            session_file = user_data["client"].session.filename
-            os.remove(session_file)  # Hapus file sesi
-    user_sessions.clear()  # Hapus data sesi
-    total_sessions = 0  # Reset total sesi ke 0
-    await event.reply("✅ Semua sesi telah direset.")
+    sender = await event.get_sender()
+    user_id = sender.id
+
+    # Hapus semua sesi pengguna
+    if user_id in user_sessions:
+        for session in user_sessions[user_id]:
+            client = session["client"]
+            await client.disconnect()  # Disconnect client
+            session_file = os.path.join(SESSION_DIR, f'{user_id}_{session["phone"].replace("+", "")}.session')
+            if os.path.exists(session_file):
+                os.remove(session_file)
+        user_sessions[user_id] = []  # Kosongkan sesi yang terdaftar
+        total_sessions = 0  # Reset total sesi
+        await event.reply("✅ Semua sesi telah dihapus.")
+    else:
+        await event.reply("⚠️ Tidak ada sesi untuk dihapus.")
 
 @bot_client.on(events.NewMessage(pattern='/help'))
 async def help_command(event):
