@@ -29,7 +29,7 @@ bot_client = TelegramClient('bot_session', api_id, api_hash)
 
 # Variabel global untuk menghitung total sesi
 total_sessions = 0
-MAX_SESSIONS = 4  # Batas maksimal sesi (ubah menjadi 10)
+MAX_SESSIONS = 5  # Batas maksimal sesi (ubah menjadi 10)
 
 # Dictionary untuk menyimpan sesi pengguna sementara
 user_sessions = {}  # Struktur: {user_id: [{'client': TelegramClient, 'phone': str}]}
@@ -39,8 +39,7 @@ async def start(event):
     await event.reply(
         "Selamat datang di bot multi-login! 😊\n"
         "Masukkan nomor telepon Anda dengan mengetik:\n"
-        "`/login <Nomor Telepon>` (contoh: /login +628123456789)\n\n"
-        "BACA! : 2 Verifikasi harus mati / Matikan password pada account yang mau dijadiin bot"
+        "`/login <Nomor Telepon>` (contoh: /login +628123456789)"
     )
 
 @bot_client.on(events.NewMessage(pattern='/login (.+)'))
@@ -49,7 +48,7 @@ async def login(event):
 
     # Cek apakah jumlah sesi sudah mencapai batas maksimal
     if total_sessions >= MAX_SESSIONS:
-        await event.reply("⚠️ Bot sudah terhubung dengan maksimal 4 akun. Logout salah satu untuk menambahkan akun baru.")
+        await event.reply("⚠️ Bot sudah terhubung dengan maksimal 10 akun. Logout salah satu untuk menambahkan akun baru.")
         return
 
     sender = await event.get_sender()
@@ -139,6 +138,11 @@ async def logout(event):
     if os.path.exists(session_file):
         os.remove(session_file)
         total_sessions -= 1  # Kurangi jumlah total sesi
+        # Hapus sesi dari user_sessions
+        if user_id in user_sessions:
+            user_sessions[user_id] = [session for session in user_sessions[user_id] if session["phone"] != phone]
+            if not user_sessions[user_id]:
+                del user_sessions[user_id]  # Hapus user_id jika tidak ada sesi
         await event.reply(f"✅ Berhasil logout untuk nomor {phone}.")
     else:
         await event.reply(f"⚠️ Tidak ada sesi aktif untuk nomor {phone}.")
@@ -165,7 +169,6 @@ async def list_accounts(event):
     else:
         await event.reply(f"⚠️ Tidak ada akun yang login untuk Anda.\n"
                           f"Total akun yang login: {total_sessions}/{MAX_SESSIONS}")
-
 
 @bot_client.on(events.NewMessage(pattern='/resetall'))
 async def reset_all_sessions(event):
