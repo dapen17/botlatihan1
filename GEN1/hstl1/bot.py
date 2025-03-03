@@ -1,13 +1,18 @@
-import os                                                   import json
+import os
+import json
 import asyncio
 from telethon import TelegramClient, events, errors
 from features import configure_event_handlers  # Import fitur tambahan
-                                                            # Load konfigurasi dari file
+
+# Load konfigurasi dari file
 CONFIG_FILE = 'config.json'
 if not os.path.exists(CONFIG_FILE):
-    raise FileNotFoundError(f"File konfigurasi '{CONFIG_FILE}' tidak ditemukan.")                                       
-with open(CONFIG_FILE, 'r') as f:                               config = json.load(f)
-                                                            api_id = config.get('api_id')
+    raise FileNotFoundError(f"File konfigurasi '{CONFIG_FILE}' tidak ditemukan.")
+
+with open(CONFIG_FILE, 'r') as f:
+    config = json.load(f)
+
+api_id = config.get('api_id')
 api_hash = config.get('api_hash')
 bot_token = config.get('bot_token')
 
@@ -22,7 +27,8 @@ if not os.path.exists(SESSION_DIR):
 # Inisialisasi bot utama
 bot_client = TelegramClient('bot_session', api_id, api_hash)
 
-# Variabel global untuk menghitung total sesi               total_sessions = 0
+# Variabel global untuk menghitung total sesi
+total_sessions = 0
 MAX_SESSIONS = 4  # Batas maksimal sesi (ubah menjadi 10)
 
 # Dictionary untuk menyimpan sesi pengguna sementara
@@ -33,18 +39,24 @@ async def start(event):
     await event.reply(
         "Selamat datang di bot multi-login! 😊\n"
         "Masukkan nomor telepon Anda dengan mengetik:\n"
-        "/login <Nomor Telepon> (contoh: /login +628123456789)"
+        "`/login <Nomor Telepon>` (contoh: /login +628123456789)"
     )
-                                                            @bot_client.on(events.NewMessage(pattern='/login (.+)'))
+
+@bot_client.on(events.NewMessage(pattern='/login (.+)'))
 async def login(event):
     global total_sessions  # Mengakses variabel global
 
     # Cek apakah jumlah sesi sudah mencapai batas maksimal
-    if total_sessions >= MAX_SESSIONS:                              await event.reply("⚠ Bot sudah terhubung dengan maksimal 10 akun. Logout salah satu untuk menambahkan akun baru.")                                                                  return
+    if total_sessions >= MAX_SESSIONS:
+        await event.reply("⚠️ Bot sudah terhubung dengan maksimal 10 akun. Logout salah satu untuk menambahkan akun baru.")
+        return
 
     sender = await event.get_sender()
-    user_id = sender.id                                         phone = event.pattern_match.group(1)
-                                                                session_file = os.path.join(SESSION_DIR, f'{user_id}_{phone.replace("+", "")}.session')                             
+    user_id = sender.id
+    phone = event.pattern_match.group(1)
+
+    session_file = os.path.join(SESSION_DIR, f'{user_id}_{phone.replace("+", "")}.session')
+
     # Cek apakah sesi sudah ada
     if os.path.exists(session_file):
         try:
@@ -53,17 +65,22 @@ async def login(event):
 
             # Pastikan sesi tidak terkunci
             if await user_client.is_user_authorized():
-                total_sessions += 1  # Update jumlah sesi                   # Simpan sesi di user_sessions
+                total_sessions += 1  # Update jumlah sesi
+                # Simpan sesi di user_sessions
                 if user_id not in user_sessions:
-                    user_sessions[user_id] = []                             user_sessions[user_id].append({"client": user_client, "phone": phone})                                                  await event.reply(f"✅ Anda sudah login sebelumnya! Langsung terhubung sebagai {phone}.")
-                await configure_event_handlers(user_client, user_id)                                                                    return
-            else:                                                           await user_client.disconnect()
+                    user_sessions[user_id] = []
+                user_sessions[user_id].append({"client": user_client, "phone": phone})
+                await event.reply(f"✅ Anda sudah login sebelumnya! Langsung terhubung sebagai {phone}.")
+                await configure_event_handlers(user_client, user_id)
+                return
+            else:
+                await user_client.disconnect()
                 os.remove(session_file)  # Hapus sesi yang corrupt
-                await event.reply("⚠ Sesi lama tidak valid, melakukan login ulang...")
+                await event.reply("⚠️ Sesi lama tidak valid, melakukan login ulang...")
         except errors.SessionPasswordNeededError:
-            await event.reply("⚠ Sesi ini membutuhkan password. Silakan login ulang dengan OTP.")
+            await event.reply("⚠️ Sesi ini membutuhkan password. Silakan login ulang dengan OTP.")
         except Exception as e:
-            await event.reply(f"⚠ Gagal menggunakan sesi lama: {e}. Login ulang diperlukan.")
+            await event.reply(f"⚠️ Gagal menggunakan sesi lama: {e}. Login ulang diperlukan.")
             try:
                 await user_client.disconnect()
             except:
@@ -72,7 +89,8 @@ async def login(event):
     # Login dengan OTP
     try:
         user_client = TelegramClient(session_file, api_id, api_hash)
-        await user_client.connect()                                 await user_client.send_code_request(phone)
+        await user_client.connect()
+        await user_client.send_code_request(phone)
 
         # Jika login berhasil, update jumlah total sesi dan simpan sesi pengguna
         total_sessions += 1
@@ -82,9 +100,9 @@ async def login(event):
 
         await event.reply("✅ Kode OTP telah dikirim! Masukkan kode dengan mengetik:\n`/verify <Kode>`")
     except errors.FloodWaitError as e:
-        await event.reply(f"⚠ Tunggu {e.seconds} detik sebelum mencoba lagi.")
+        await event.reply(f"⚠️ Tunggu {e.seconds} detik sebelum mencoba lagi.")
     except Exception as e:
-        await event.reply(f"⚠ Gagal mengirim kode OTP: {e}")
+        await event.reply(f"⚠️ Gagal mengirim kode OTP: {e}")
 
 @bot_client.on(events.NewMessage(pattern='/verify (.+)'))
 async def verify(event):
@@ -93,7 +111,7 @@ async def verify(event):
     code = event.pattern_match.group(1)
 
     if user_id not in user_sessions or not user_sessions[user_id]:
-        await event.reply("⚠ Anda belum login. Gunakan perintah /login terlebih dahulu.")
+        await event.reply("⚠️ Anda belum login. Gunakan perintah `/login` terlebih dahulu.")
         return
 
     # Cek jika ada client aktif untuk user ini
@@ -105,7 +123,7 @@ async def verify(event):
         await event.reply(f"✅ Verifikasi berhasil untuk nomor {phone}! Anda sekarang dapat menggunakan fitur.")
         await configure_event_handlers(user_client, user_id)
     except Exception as e:
-        await event.reply(f"⚠ Gagal memverifikasi kode untuk nomor {phone}: {e}")
+        await event.reply(f"⚠️ Gagal memverifikasi kode untuk nomor {phone}: {e}")
 
 
 @bot_client.on(events.NewMessage(pattern='/logout (.+)'))
@@ -123,7 +141,7 @@ async def logout(event):
         total_sessions -= 1  # Kurangi jumlah total sesi
         await event.reply(f"✅ Berhasil logout untuk nomor {phone}.")
     else:
-        await event.reply(f"⚠ Tidak ada sesi aktif untuk nomor {phone}.")
+        await event.reply(f"⚠️ Tidak ada sesi aktif untuk nomor {phone}.")
 
 @bot_client.on(events.NewMessage(pattern='/list'))
 async def list_accounts(event):
@@ -146,13 +164,13 @@ async def list_accounts(event):
 @bot_client.on(events.NewMessage(pattern='/help'))
 async def help_command(event):
     await event.reply(
-        "📋 *Daftar Perintah untuk Bot Multi-Login:*\n\n"
-        "/start - Mulai interaksi dengan bot.\n"
-        "/login <Nomor> - Masukkan nomor telepon Anda untuk login.\n"
-        "/verify <Kode> - Verifikasi kode OTP.\n"
-        "/logout <Nomor> - Logout dari sesi yang aktif.\n"
-        "/list - Menampilkan daftar akun yang sedang login.\n"
-        "/help - Tampilkan daftar perintah."
+        "📋 **Daftar Perintah untuk Bot Multi-Login:**\n\n"
+        "`/start` - Mulai interaksi dengan bot.\n"
+        "`/login <Nomor>` - Masukkan nomor telepon Anda untuk login.\n"
+        "`/verify <Kode>` - Verifikasi kode OTP.\n"
+        "`/logout <Nomor>` - Logout dari sesi yang aktif.\n"
+        "`/list` - Menampilkan daftar akun yang sedang login.\n"
+        "`/help` - Tampilkan daftar perintah."
     )
 
 async def run_bot():
@@ -168,5 +186,5 @@ async def run_bot():
             print(f"Error tidak terduga: {e}. Restart dalam 10 detik...")
             await asyncio.sleep(10)
 
-if _name_ == '_main_':
+if __name__ == '__main__':
     asyncio.run(run_bot())
