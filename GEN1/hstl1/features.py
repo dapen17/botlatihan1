@@ -5,6 +5,7 @@ from datetime import datetime
 from collections import defaultdict
 from telethon.tl.types import InputPeerUser
 
+
 # Menyimpan status per akun dan grup
 active_groups = defaultdict(lambda: defaultdict(bool))  # {group_id: {user_id: status}}
 active_bc_interval = defaultdict(lambda: defaultdict(bool))  # {user_id: {type: status}}
@@ -46,77 +47,68 @@ async def configure_event_handlers(client, user_id):
             try:
                 await client.send_message(dialog.id, custom_message)
                 message_count[get_today_date()] += 1
-            except errors.FloodWaitError as e:
-                print(f"Flood wait error: Bot harus menunggu {e.seconds} detik.")
-                await asyncio.sleep(e.seconds)
-                await client.send_message(dialog.id, custom_message)  # Retry after wait
             except Exception as e:
                 print(f"Gagal mengirim pesan ke {dialog.name}: {e}")
 
     @client.on(events.NewMessage(pattern=r'^gal bcstargr(\d+) (\d+[smhd]) (.+)$'))
     async def broadcast_group_handler(event):
-        """Broadcast pesan hanya ke grup dengan interval tertentu."""
+        """Broadcast pesan hanya ke grup dengan interval tertentu dan update pesan secara dinamis."""
         group_number = event.pattern_match.group(1)
         interval_str, custom_message = event.pattern_match.groups()[1:]
         interval = parse_interval(interval_str)
-    
+
         if not interval:
             await event.reply("\u26A0 Format waktu salah! Gunakan format 10s, 1m, 2h, dll.")
             return
-    
-        # Cek jika broadcast sudah berjalan
+
         if active_bc_interval[user_id][f"group{group_number}"]:
             await event.reply(f"\u26A0 Broadcast ke grup {group_number} sudah berjalan.")
             return
-    
-        # Tandai broadcast sebagai aktif
+
         active_bc_interval[user_id][f"group{group_number}"] = True
-        await event.reply(f"\u2705 Memulai broadcast ke grup {group_number} dengan interval {interval_str}: {custom_message}\nStatus: Broadcast berjalan...")
-    
+        message = await event.reply(f"\u2705 Memulai broadcast ke grup {group_number} dengan interval {interval_str}: {custom_message}\nMengirim ke grup: 0/0...")
+
         total_groups = 0  # Track total grup yang ada
-    
+        total_groups_sent = 0  # Track total grup yang sudah terkirim pesan
+
         # Hitung total grup yang ada
         async for dialog in client.iter_dialogs():
             if dialog.is_group and dialog.id not in blacklist:
                 total_groups += 1
-    
+
         if total_groups == 0:
-            await event.reply("🚫 Tidak ada grup untuk dikirim!")
+            await message.edit("🚫 Tidak ada grup untuk dikirim!")
             return
-    
-        # Proses broadcast ke grup dengan interval dan kirim pesan baru setiap kali
+
+        # Proses broadcast ke grup dengan interval dan update pesan secara dinamis
         while active_bc_interval[user_id][f"group{group_number}"]:
+            sent_in_group = 0  # Track jumlah grup yang telah diproses dalam loop ini
+
             # Kirim pesan ke setiap grup
             for dialog in await client.get_dialogs():
                 if dialog.is_group and dialog.id not in blacklist:
                     try:
                         await client.send_message(dialog.id, custom_message)
+                        total_groups_sent += 1
+                        sent_in_group += 1
                         message_count[get_today_date()] += 1
-                    except errors.FloodWaitError as e:
-                        # Tampilkan pesan jika terjadi flood wait
-                        await event.reply(f"Flood wait error: Bot harus menunggu {e.seconds} detik sebelum melanjutkan.")
-                        print(f"Flood wait error: Bot harus menunggu {e.seconds} detik.")
-                        await asyncio.sleep(e.seconds)  # Tunggu hingga flood wait selesai
-                        # Setelah menunggu, melanjutkan broadcast
-                        if active_bc_interval[user_id][f"group{group_number}"]:  # Pastikan broadcast masih aktif
-                            await client.send_message(dialog.id, custom_message)
                     except Exception as e:
                         print(f"Gagal mengirim pesan ke {dialog.name}: {e}")
-    
-            # Kirim pesan status baru untuk menunjukkan bahwa broadcast masih berjalan
-            await client.send_message(
-                event.chat_id,
-                f"\u2705 Memulai broadcast ke grup {group_number} dengan interval {interval_str}: {custom_message}\nStatus: Broadcast berjalan... Interval: {interval_str}"
-            )
-    
+
+            # Update pesan dengan jumlah grup yang telah dikirim dan interval yang tersisa
+            await message.edit(f"\u2705 Memulai broadcast ke grup {group_number} dengan interval {interval_str}: {custom_message}\nMengirim ke grup: {total_groups_sent}/{total_groups}... Interval: {interval_str}")
+
+            # Jika semua grup sudah diproses, reset counter dan mulai lagi dari 0
+            if total_groups_sent >= total_groups:
+                total_groups_sent = 0
+                # Mengulang pesan setelah semua terkirim
+                await message.edit(f"\u2705 Memulai ulang broadcast ke grup {group_number}... Mengirim ke grup: 0/{total_groups}... Interval: {interval_str}")
+
             # Tunggu sesuai interval waktu sebelum melanjutkan
             await asyncio.sleep(interval)
-    
-        # Kirim pesan ketika broadcast selesai
-        await client.send_message(
-            event.chat_id,
-            f"✅ Broadcast ke grup {group_number} selesai!"
-        )
+
+        # Update pesan ketika broadcast selesai
+        await message.edit(f"✅ Broadcast ke grup {group_number} selesai!")
 
 
     @client.on(events.NewMessage(pattern=r'^gal stopbcstargr(\d+)$'))
@@ -143,6 +135,7 @@ async def configure_event_handlers(client, user_id):
             try:
                 sender = await event.get_sender()
                 peer = InputPeerUser(sender.id, sender.access_hash)  # Pakai InputPeerUser
+                
                 await client.send_message(peer, auto_replies[user_id])
                 await client.send_read_acknowledge(peer)  # Tandai sebagai telah dibaca
 
@@ -151,7 +144,6 @@ async def configure_event_handlers(client, user_id):
                 print("Gagal mengirim auto-reply: Username tidak ditemukan.")
             except errors.rpcerrorlist.FloodWaitError as e:
                 print(f"Bot terkena flood wait. Coba lagi dalam {e.seconds} detik.")
-                await asyncio.sleep(e.seconds)  # Tunggu sampai waktunya selesai sebelum mencoba lagi
             except Exception as e:
                 print(f"Gagal mengirim auto-reply: {e}")
 
@@ -178,6 +170,7 @@ async def configure_event_handlers(client, user_id):
                 active_bc_interval[user_id][group_key] = False
 
         await event.reply("\u2705 Semua pengaturan telah direset dan semua broadcast dihentikan.")
+
 
     @client.on(events.NewMessage(pattern=r'^gal help$'))
     async def help_handler(event):
