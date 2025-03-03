@@ -50,6 +50,20 @@ async def configure_event_handlers(client, user_id):
             except Exception as e:
                 print(f"Gagal mengirim pesan ke {dialog.name}: {e}")
 
+    @client.on(events.NewMessage(pattern=r'^gal bcstargr (.+)$'))
+    async def broadcast_handler(event):
+        """Broadcast pesan ke semua chat kecuali blacklist."""
+        custom_message = event.pattern_match.group(1)
+        await event.reply(f"\u2705 Memulai broadcast ke semua chat: {custom_message}")
+        async for dialog in client.iter_dialogs():
+            if dialog.id in blacklist:
+                continue
+            try:
+                await client.send_message(dialog.id, custom_message)
+                message_count[get_today_date()] += 1
+            except Exception as e:
+                print(f"Gagal mengirim pesan ke {dialog.name}: {e}")
+
     @client.on(events.NewMessage(pattern=r'^gal bcstargr(\d+) (\d+[smhd]) (.+)$'))
     async def broadcast_group_handler(event):
         """Broadcast pesan hanya ke grup dengan interval tertentu dan update pesan secara dinamis."""
@@ -110,7 +124,6 @@ async def configure_event_handlers(client, user_id):
         # Update pesan ketika broadcast selesai
         await message.edit(f"✅ Broadcast ke grup {group_number} selesai!")
 
-
     @client.on(events.NewMessage(pattern=r'^gal stopbcstargr(\d+)$'))
     async def stop_broadcast_group_handler(event):
         """Hentikan broadcast grup."""
@@ -170,7 +183,6 @@ async def configure_event_handlers(client, user_id):
                 active_bc_interval[user_id][group_key] = False
 
         await event.reply("\u2705 Semua pengaturan telah direset dan semua broadcast dihentikan.")
-
 
     @client.on(events.NewMessage(pattern=r'^gal help$'))
     async def help_handler(event):
