@@ -111,7 +111,6 @@ async def configure_event_handlers(client, user_id):
         await message.edit(f"✅ Broadcast ke grup {group_number} selesai!")
 
 
-
     @client.on(events.NewMessage(pattern=r'^ami stopbcstargr(\d+)$'))
     async def stop_broadcast_group_handler(event):
         """Hentikan broadcast grup."""
