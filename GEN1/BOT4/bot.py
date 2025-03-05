@@ -29,7 +29,7 @@ bot_client = TelegramClient('bot_session', api_id, api_hash)
 
 # Variabel global untuk menghitung total sesi
 total_sessions = 0
-MAX_SESSIONS = 4  # Batas maksimal sesi (ubah menjadi 10)
+MAX_SESSIONS = 10  # Batas maksimal sesi (ubah menjadi 10)
 
 # Dictionary untuk menyimpan sesi pengguna sementara
 user_sessions = {}  # Struktur: {user_id: [{'client': TelegramClient, 'phone': str}]}
@@ -171,16 +171,21 @@ async def list_accounts(event):
 async def reset_all_sessions(event):
     global total_sessions  # Mengakses variabel global
 
+    print("Perintah /resetall diterima!")  # Log untuk memastikan perintah diterima
+    
     # Menghapus semua sesi
     for user_id in user_sessions.keys():
         for user_data in user_sessions[user_id]:
             user_client = user_data["client"]
             await user_client.disconnect()  # Disconnect semua client
             session_file = user_data["client"].session.filename
+            print(f"Deleting session file: {session_file}")  # Log untuk melihat file sesi yang dihapus
             os.remove(session_file)  # Hapus file sesi
     user_sessions.clear()  # Hapus data sesi
     total_sessions = 0  # Reset total sesi ke 0
     await event.reply("✅ Semua sesi telah direset.")
+    print("Semua sesi telah direset.")  # Log untuk memastikan proses selesai
+
 
 @bot_client.on(events.NewMessage(pattern='/help'))
 async def help_command(event):
