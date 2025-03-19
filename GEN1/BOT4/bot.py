@@ -79,7 +79,7 @@ async def login(event):
                 os.remove(session_file)  # Hapus sesi yang corrupt
                 await event.reply("⚠️ Sesi lama tidak valid, melakukan login ulang...")
         except errors.SessionPasswordNeededError:
-            await event.reply("⚠️ Sesi ini membutuhkan password. Silakan login ulang dengan OTP.")
+            await event.reply("⚠️ Sesi ini membutuhkan password. Silakan login ulang dengan OTP atau masukkan password.")
         except Exception as e:
             await event.reply(f"⚠️ Gagal menggunakan sesi lama: {e}. Login ulang diperlukan.")
             try:
@@ -199,6 +199,25 @@ async def help_command(event):
         "`/resetall` - Menghapus semua sesi.\n"
         "`/help` - Tampilkan daftar perintah."
     )
+
+@bot_client.on(events.NewMessage(pattern='/password (.+)'))
+async def password(event):
+    sender = await event.get_sender()
+    user_id = sender.id
+    password = event.pattern_match.group(1)
+
+    if user_id not in user_sessions or not user_sessions[user_id]:
+        await event.reply("⚠️ Anda belum login. Gunakan perintah `/login` terlebih dahulu.")
+        return
+
+    user_client = user_sessions[user_id][-1]["client"]
+
+    try:
+        await user_client.start(password=password)
+        await event.reply("✅ Password berhasil dimasukkan, Anda dapat melanjutkan.")
+        await configure_event_handlers(user_client, user_id)
+    except Exception as e:
+        await event.reply(f"⚠️ Gagal memasukkan password: {e}")
 
 async def run_bot():
     while True:
