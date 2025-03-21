@@ -87,42 +87,6 @@ async def configure_event_handlers(client, user_id):
                 # Menangani error tanpa output log
                 pass
 
-    # Broadcast pesan ke semua chat dengan interval tertentu
-    @client.on(events.NewMessage(pattern=r'^gal bcstarw (\d+[smhd]) (.+)$'))
-    async def broadcast_with_interval_handler(event):
-        interval_str, custom_message = event.pattern_match.groups()
-        interval = parse_interval(interval_str)
-
-        if not interval:
-            await event.reply("⚠️ Format waktu salah! Gunakan format 10s, 1m, 2h, dll.")
-            return
-
-        if active_bc_interval[user_id]["all"]:
-            await event.reply("⚠️ Broadcast interval sudah berjalan.")
-            return
-
-        active_bc_interval[user_id]["all"] = True
-        await event.reply(f"✅ Memulai broadcast dengan interval {interval_str}: {custom_message}")
-        while active_bc_interval[user_id]["all"]:
-            async for dialog in client.iter_dialogs():
-                if dialog.id in blacklist:
-                    continue
-                try:
-                    await client.send_message(dialog.id, custom_message)
-                except Exception as e:
-                    # Menangani error tanpa output log
-                    pass
-            await asyncio.sleep(interval)
-
-    # Hentikan broadcast interval
-    @client.on(events.NewMessage(pattern=r'^gal stopbcstarw$'))
-    async def stop_broadcast_interval_handler(event):
-        if active_bc_interval[user_id]["all"]:
-            active_bc_interval[user_id]["all"] = False
-            await event.reply("✅ Broadcast interval dihentikan.")
-        else:
-            await event.reply("⚠️ Tidak ada broadcast interval yang berjalan.")
-
     # Broadcast pesan hanya ke grup dengan interval tertentu
     @client.on(events.NewMessage(pattern=r'^gal bcstargr(\d+) (\d+[smhd]) (.+)$'))
     async def broadcast_group_handler(event):
@@ -190,19 +154,13 @@ async def configure_event_handlers(client, user_id):
             "   Tes koneksi bot.\n"
             "4. gal bcstar [pesan]\n"
             "   Broadcast ke semua chat kecuali blacklist.\n"
-            "5. gal bcstarw [waktu][s/m/h/d] [pesan]\n"
-            "   Broadcast ke semua chat dengan interval tertentu.\n"
-            "6. gal stopbcstarw\n"
-            "   Hentikan broadcast interval.\n"
-            "7. gal bcstargr [waktu][s/m/h/d] [pesan]\n"
+            "5. gal bcstargr [waktu][s/m/h/d] [pesan]\n"
             "   Broadcast hanya ke grup dengan interval tertentu.\n"
-            "8. gal bcstargr1 [waktu][s/m/h/d] [pesan]\n"
-            "   Broadcast hanya ke grup 1 dengan interval tertentu.\n"
-            "9. gal stopbcstargr[1-10]\n"
+            "6. gal stopbcstargr[1-10]\n"
             "   Hentikan broadcast ke grup tertentu.\n"
-            "10. gal bl\n"
+            "7. gal bl\n"
             "    Tambahkan grup/chat ke blacklist.\n"
-            "11. gal unbl\n"
+            "8. gal unbl\n"
             "    Hapus grup/chat dari blacklist.\n"
         )
         await event.reply(help_text)
