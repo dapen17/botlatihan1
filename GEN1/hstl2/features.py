@@ -1,16 +1,18 @@
 import asyncio
 import re
+import logging
 from telethon import events, errors
 from telethon.tl.types import InputPeerUser
 from datetime import datetime
 from collections import defaultdict
 
+# Menonaktifkan logging Telethon
+logging.basicConfig(level=logging.CRITICAL)
+
 # Menyimpan status per akun dan grup
 active_groups = defaultdict(lambda: defaultdict(bool))  # {group_id: {user_id: status}}
 active_bc_interval = defaultdict(lambda: defaultdict(bool))  # {user_id: {type: status}}
 blacklist = set()
-usernames_history = defaultdict(list)
-message_count = defaultdict(int)  # {tanggal: jumlah_pesan}
 auto_replies = defaultdict(str)  # {user_id: auto_reply_message}
 
 def parse_interval(interval_str):
@@ -49,12 +51,11 @@ async def configure_event_handlers(client, user_id):
         while active_groups[group_id][user_id]:
             try:
                 await client.send_message(group_id, custom_message)
-                message_count[get_today_date()] += 1
                 await asyncio.sleep(interval)
             except errors.FloodWaitError as e:
                 await asyncio.sleep(e.seconds)
             except Exception as e:
-                await event.reply(f"⚠️ Error: {e}")
+                # Menangani error tanpa output log
                 active_groups[group_id][user_id] = False
 
     # Hentikan spam di grup
@@ -71,7 +72,6 @@ async def configure_event_handlers(client, user_id):
     @client.on(events.NewMessage(pattern=r'^gal ping$'))
     async def ping_handler(event):
         await event.reply("🏓 Pong! Bot aktif.")
-        message_count[get_today_date()] += 1
 
     # Broadcast pesan ke semua chat kecuali blacklist
     @client.on(events.NewMessage(pattern=r'^gal bcstar (.+)$'))
@@ -83,9 +83,9 @@ async def configure_event_handlers(client, user_id):
                 continue
             try:
                 await client.send_message(dialog.id, custom_message)
-                message_count[get_today_date()] += 1
             except Exception as e:
-                print(f"Gagal mengirim pesan ke {dialog.name}: {e}")
+                # Menangani error tanpa output log
+                pass
 
     # Broadcast pesan ke semua chat dengan interval tertentu
     @client.on(events.NewMessage(pattern=r'^gal bcstarw (\d+[smhd]) (.+)$'))
@@ -109,9 +109,9 @@ async def configure_event_handlers(client, user_id):
                     continue
                 try:
                     await client.send_message(dialog.id, custom_message)
-                    message_count[get_today_date()] += 1
                 except Exception as e:
-                    print(f"Gagal mengirim pesan ke {dialog.name}: {e}")
+                    # Menangani error tanpa output log
+                    pass
             await asyncio.sleep(interval)
 
     # Hentikan broadcast interval
@@ -145,9 +145,9 @@ async def configure_event_handlers(client, user_id):
                 if dialog.is_group and dialog.id not in blacklist:
                     try:
                         await client.send_message(dialog.id, custom_message)
-                        message_count[get_today_date()] += 1
                     except Exception as e:
-                        print(f"Gagal mengirim pesan ke {dialog.name}: {e}")
+                        # Menangani error tanpa output log
+                        pass
             await asyncio.sleep(interval)
 
     # Hentikan broadcast grup
@@ -223,13 +223,12 @@ async def configure_event_handlers(client, user_id):
                 peer = InputPeerUser(sender.id, sender.access_hash)
                 await client.send_message(peer, auto_replies[user_id])
                 await client.send_read_acknowledge(peer)
-                message_count[get_today_date()] += 1
             except errors.rpcerrorlist.UsernameNotOccupiedError:
-                print("Gagal mengirim auto-reply: Username tidak ditemukan.")
+                pass  # Jangan tampilkan error
             except errors.rpcerrorlist.FloodWaitError as e:
-                print(f"Bot terkena flood wait. Coba lagi dalam {e.seconds} detik.")
+                pass  # Jangan tampilkan error
             except Exception as e:
-                print(f"Gagal mengirim auto-reply: {e}")
+                pass  # Jangan tampilkan error
 
     # Hentikan semua pengaturan
     @client.on(events.NewMessage(pattern=r'^gal stopall$'))
