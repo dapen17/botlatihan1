@@ -32,7 +32,7 @@ async def configure_event_handlers(client, user_id):
     """Konfigurasi semua fitur bot untuk user_id tertentu."""
 
     # Spam pesan ke grup dengan interval tertentu
-    @client.on(events.NewMessage(pattern=r'^304 hastle (.+) (\d+[smhd])$'))
+    @client.on(events.NewMessage(pattern=r'^viona hastle (.+) (\d+[smhd])$'))
     async def hastle_handler(event):
         custom_message, interval_str = event.pattern_match.groups()
         group_id = event.chat_id
@@ -59,7 +59,7 @@ async def configure_event_handlers(client, user_id):
                 active_groups[group_id][user_id] = False
 
     # Hentikan spam di grup
-    @client.on(events.NewMessage(pattern=r'^304 stop$'))
+    @client.on(events.NewMessage(pattern=r'^viona stop$'))
     async def stop_handler(event):
         group_id = event.chat_id
         if active_groups[group_id][user_id]:
@@ -69,12 +69,12 @@ async def configure_event_handlers(client, user_id):
             await event.reply("⚠️ Tidak ada spam yang berjalan untuk akun Anda di grup ini.")
 
     # Tes koneksi bot
-    @client.on(events.NewMessage(pattern=r'^304 ping$'))
+    @client.on(events.NewMessage(pattern=r'^viona ping$'))
     async def ping_handler(event):
         await event.reply("🏓 Pong! Bot aktif.")
 
     # Broadcast pesan ke semua chat kecuali blacklist
-    @client.on(events.NewMessage(pattern=r'^304 bcstar (.+)$'))
+    @client.on(events.NewMessage(pattern=r'^viona bcstar (.+)$'))
     async def broadcast_handler(event):
         custom_message = event.pattern_match.group(1)
         await event.reply(f"✅ Memulai broadcast ke semua chat: {custom_message}")
@@ -88,7 +88,7 @@ async def configure_event_handlers(client, user_id):
                 pass
 
     # Broadcast pesan hanya ke grup dengan interval tertentu
-    @client.on(events.NewMessage(pattern=r'^304 bcstargr(\d+) (\d+[smhd]) (.+)$'))
+    @client.on(events.NewMessage(pattern=r'^viona bcstargr(\d+) (\d+[smhd]) (.+)$'))
     async def broadcast_group_handler(event):
         group_number = event.pattern_match.group(1)
         interval_str, custom_message = event.pattern_match.groups()[1:]
@@ -115,7 +115,7 @@ async def configure_event_handlers(client, user_id):
             await asyncio.sleep(interval)
 
     # Hentikan broadcast grup
-    @client.on(events.NewMessage(pattern=r'^304 stopbcstargr(\d+)$'))
+    @client.on(events.NewMessage(pattern=r'^viona stopbcstargr(\d+)$'))
     async def stop_broadcast_group_handler(event):
         group_number = event.pattern_match.group(1)
         if active_bc_interval[user_id][f"group{group_number}"]:
@@ -125,14 +125,14 @@ async def configure_event_handlers(client, user_id):
             await event.reply(f"⚠️ Tidak ada broadcast grup {group_number} yang berjalan.")
 
     # Tambahkan grup/chat ke blacklist
-    @client.on(events.NewMessage(pattern=r'^304 bl$'))
+    @client.on(events.NewMessage(pattern=r'^viona bl$'))
     async def blacklist_handler(event):
         chat_id = event.chat_id
         blacklist.add(chat_id)
         await event.reply("✅ Grup ini telah ditambahkan ke blacklist.")
 
     # Hapus grup/chat dari blacklist
-    @client.on(events.NewMessage(pattern=r'^304 unbl$'))
+    @client.on(events.NewMessage(pattern=r'^viona unbl$'))
     async def unblacklist_handler(event):
         chat_id = event.chat_id
         if chat_id in blacklist:
@@ -142,31 +142,31 @@ async def configure_event_handlers(client, user_id):
             await event.reply("⚠️ Grup ini tidak ada dalam blacklist.")
 
     # Tampilkan daftar perintah
-    @client.on(events.NewMessage(pattern=r'^304 help$'))
+    @client.on(events.NewMessage(pattern=r'^viona help$'))
     async def help_handler(event):
         help_text = (
             "📋 **Daftar Perintah yang Tersedia:**\n\n"
-            "1. 304 hastle [pesan] [waktu][s/m/h/d]\n"
+            "1. viona hastle [pesan] [waktu][s/m/h/d]\n"
             "   Spam pesan di grup dengan interval tertentu.\n"
-            "2. 304 stop\n"
+            "2. viona stop\n"
             "   Hentikan spam di grup.\n"
-            "3. 304 ping\n"
+            "3. viona ping\n"
             "   Tes koneksi bot.\n"
-            "4. 304 bcstar [pesan]\n"
+            "4. viona bcstar [pesan]\n"
             "   Broadcast ke semua chat kecuali blacklist.\n"
-            "5. 304 bcstargr [waktu][s/m/h/d] [pesan]\n"
+            "5. viona bcstargr [waktu][s/m/h/d] [pesan]\n"
             "   Broadcast hanya ke grup dengan interval tertentu.\n"
-            "6. 304 stopbcstargr[1-10]\n"
+            "6. viona stopbcstargr[1-10]\n"
             "   Hentikan broadcast ke grup tertentu.\n"
-            "7. 304 bl\n"
+            "7. viona bl\n"
             "    Tambahkan grup/chat ke blacklist.\n"
-            "8. 304 unbl\n"
+            "8. viona unbl\n"
             "    Hapus grup/chat dari blacklist.\n"
         )
         await event.reply(help_text)
 
     # Atur auto-reply
-    @client.on(events.NewMessage(pattern=r'^304 setreply (.+)$'))
+    @client.on(events.NewMessage(pattern=r'^viona setreply (.+)$'))
     async def set_auto_reply(event):
         reply_message = event.pattern_match.group(1)
         auto_replies[user_id] = reply_message
@@ -189,7 +189,7 @@ async def configure_event_handlers(client, user_id):
                 pass  # Jangan tampilkan error
 
     # Hentikan semua pengaturan
-    @client.on(events.NewMessage(pattern=r'^304 stopall$'))
+    @client.on(events.NewMessage(pattern=r'^viona stopall$'))
     async def stop_all_handler(event):
         for group_key in active_bc_interval[user_id].keys():
             active_bc_interval[user_id][group_key] = False
